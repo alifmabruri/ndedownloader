@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NDE Downloader — Arsipkan Surat Keluar Tanpa Klik Satu-satu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1A2229;
+    --ink-soft:#242F38;
+    --paper:#EAE5D6;
+    --paper-soft:#F4F0E4;
+    --kraft:#C89B5C;
+    --stamp:#B23A2E;
+    --ok:#3F7A5C;
+    --muted:#6B6455;
+    --line: rgba(26,34,41,0.12);
+    --radius: 4px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    line-height:1.5;
+  }
+  h1,h2,h3{
+    font-family:'Space Grotesk',sans-serif;
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+  .mono{ font-family:'IBM Plex Mono',monospace; }
+  a{ color:inherit; }
+  .wrap{ max-width:1120px; margin:0 auto; padding:0 28px; }
+
+  /* ---------- topbar ---------- */
+  .topbar{
+    background:var(--ink);
+    color:var(--paper-soft);
+    position:sticky; top:0; z-index:50;
+    border-bottom:1px solid rgba(255,255,255,0.08);
+  }
+  .topbar .wrap{ display:flex; align-items:center; justify-content:space-between; height:60px; }
+  .brand{ display:flex; align-items:center; gap:10px; font-weight:700; font-size:15px; }
+  .brand .mark{
+    width:26px;height:26px;border-radius:3px;
+    background:var(--stamp);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'IBM Plex Mono';font-size:11px;font-weight:500;color:#fff;
+    transform:rotate(-4deg);
+  }
+  nav{ display:flex; gap:26px; font-size:14px; }
+  nav a{ text-decoration:none; opacity:0.75; transition:opacity .15s; }
+  nav a:hover{ opacity:1; }
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:11px 20px; border-radius:var(--radius);
+    font-weight:600; font-size:14px; text-decoration:none;
+    border:1px solid transparent; cursor:pointer;
+  }
+  .btn-primary{ background:var(--stamp); color:#fff; }
+  .btn-primary:hover{ background:#9c322a; }
+  .btn-ghost{ background:transparent; color:var(--ink); border-color:var(--ink); }
+  .btn-ghost:hover{ background:var(--ink); color:var(--paper-soft); }
+  .btn-ghost-dark{ background:transparent; color:var(--paper-soft); border-color:rgba(255,255,255,0.4);}
+  .btn-ghost-dark:hover{ background:rgba(255,255,255,0.1); }
+
+  /* ---------- hero ---------- */
+  .hero{ padding:88px 0 80px; }
+  .hero-grid{
+    display:grid; grid-template-columns:1.05fr 0.95fr; gap:56px; align-items:center;
+  }
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:'IBM Plex Mono'; font-size:12px; letter-spacing:0.08em;
+    color:var(--stamp); text-transform:uppercase; margin-bottom:18px;
+  }
+  .eyebrow::before{ content:''; width:8px;height:8px;background:var(--stamp); display:inline-block; border-radius:50%; }
+  .hero h1{ font-size:44px; line-height:1.08; font-weight:700; }
+  .hero h1 .accent{ color:var(--stamp); }
+  .hero p.lead{ margin-top:20px; font-size:17px; color:var(--muted); max-width:480px; }
+  .hero-cta{ display:flex; gap:14px; margin-top:32px; flex-wrap:wrap; }
+  .hero-note{ margin-top:18px; font-size:12.5px; color:var(--muted); font-family:'IBM Plex Mono'; }
+
+  /* terminal widget */
+  .terminal{
+    background:var(--ink); border-radius:8px; overflow:hidden;
+    box-shadow:0 24px 60px -20px rgba(26,34,41,0.45);
+    transform:rotate(0.6deg);
+  }
+  .terminal-bar{
+    display:flex; align-items:center; gap:8px; padding:11px 14px;
+    background:var(--ink-soft); border-bottom:1px solid rgba(255,255,255,0.06);
+  }
+  .dot{ width:9px;height:9px;border-radius:50%; }
+  .terminal-bar .dot:nth-child(1){ background:#B23A2E; }
+  .terminal-bar .dot:nth-child(2){ background:#C89B5C; }
+  .terminal-bar .dot:nth-child(3){ background:#3F7A5C; }
+  .terminal-bar span.title{
+    margin-left:8px; font-family:'IBM Plex Mono'; font-size:12px; color:rgba(255,255,255,0.5);
+  }
+  .terminal-body{
+    padding:18px 16px; height:280px; font-family:'IBM Plex Mono'; font-size:12.5px;
+    color:#D9D4C4; overflow:hidden;
+  }
+  .terminal-body .line{ display:flex; gap:8px; margin-bottom:7px; opacity:0; animation:fadein .25s forwards; }
+  .terminal-body .ts{ color:#6B7580; flex-shrink:0; }
+  .terminal-body .ok{ color:var(--ok, #6FBF97); }
+  .terminal-body .warn{ color:var(--kraft); }
+  .cursor{ display:inline-block; width:6px; height:13px; background:#D9D4C4; animation:blink 1s step-end infinite; vertical-align:middle; }
+  @keyframes blink{ 50%{ opacity:0; } }
+  @keyframes fadein{ to{ opacity:1; } }
+
+  /* ---------- problem section ---------- */
+  .section{ padding:76px 0; border-top:1px solid var(--line); }
+  .section-head{ max-width:560px; margin-bottom:44px; }
+  .section-head .eyebrow{ margin-bottom:12px; }
+  .section-head h2{ font-size:30px; }
+  .section-head p{ color:var(--muted); margin-top:12px; font-size:15.5px; }
+
+  .compare{ display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  .card{
+    background:var(--paper-soft); border:1px solid var(--line); border-radius:6px; padding:26px;
+  }
+  .card.before{ border-left:4px solid var(--stamp); }
+  .card.after{ border-left:4px solid var(--ok); }
+  .card h3{ font-size:14px; text-transform:uppercase; letter-spacing:0.06em; font-family:'IBM Plex Mono'; margin-bottom:16px; }
+  .card.before h3{ color:var(--stamp); }
+  .card.after h3{ color:var(--ok); }
+  .card ul{ margin:0; padding:0; list-style:none; }
+  .card li{ padding:9px 0; border-top:1px dashed var(--line); font-size:14.5px; color:var(--ink); }
+  .card li:first-child{ border-top:none; }
+
+  /* ---------- features ---------- */
+  .feat-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:20px; }
+  .feat{
+    background:var(--paper-soft); border:1px solid var(--line); border-radius:6px; padding:22px 20px;
+  }
+  .feat .icon{
+    width:36px;height:36px; border-radius:6px; background:var(--ink); color:var(--paper-soft);
+    display:flex; align-items:center; justify-content:center; margin-bottom:16px;
+  }
+  .feat h3{ font-size:15.5px; margin-bottom:8px; }
+  .feat p{ font-size:13.5px; color:var(--muted); margin:0; }
+
+  /* ---------- how it works ---------- */
+  .steps{ display:grid; grid-template-columns:repeat(4,1fr); gap:0; position:relative; }
+  .steps::before{
+    content:''; position:absolute; top:22px; left:5%; right:5%; height:1px;
+    background:repeating-linear-gradient(90deg, var(--line) 0 8px, transparent 8px 14px);
+  }
+  .step{ position:relative; padding-right:16px; }
+  .step .num{
+    width:44px;height:44px; border-radius:50%; background:var(--ink); color:var(--paper-soft);
+    display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono'; font-size:14px;
+    position:relative; z-index:2; margin-bottom:18px;
+  }
+  .step h3{ font-size:15.5px; margin-bottom:8px; }
+  .step p{ font-size:13.5px; color:var(--muted); margin:0; }
+
+  /* ---------- security / dark section ---------- */
+  .section-dark{ background:var(--ink); color:var(--paper-soft); }
+  .section-dark .section-head p{ color:rgba(244,240,228,0.65); }
+  .section-dark .eyebrow{ color:var(--kraft); }
+  .section-dark .eyebrow::before{ background:var(--kraft); }
+  .notice-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+  .notice{ border:1px solid rgba(244,240,228,0.14); border-radius:6px; padding:22px; }
+  .notice h3{ font-size:14.5px; margin-bottom:8px; color:var(--paper-soft); }
+  .notice p{ font-size:13.5px; color:rgba(244,240,228,0.65); margin:0; }
+
+  /* ---------- final CTA ---------- */
+  .cta-final{ padding:80px 0; text-align:center; }
+  .cta-final h2{ font-size:32px; max-width:560px; margin:0 auto 14px; }
+  .cta-final p{ color:var(--muted); margin-bottom:30px; }
+  .cta-final .hero-cta{ justify-content:center; }
+
+  footer{ border-top:1px solid var(--line); padding:26px 0; }
+  footer .wrap{ display:flex; justify-content:space-between; align-items:center; font-size:13px; color:var(--muted); flex-wrap:wrap; gap:10px; }
+
+  @media (max-width:900px){
+    .hero-grid{ grid-template-columns:1fr; }
+    .compare, .feat-grid{ grid-template-columns:1fr 1fr; }
+    .steps{ grid-template-columns:1fr 1fr; row-gap:28px; }
+    .steps::before{ display:none; }
+    .notice-grid{ grid-template-columns:1fr; }
+    nav{ display:none; }
+    .hero h1{ font-size:34px; }
+  }
+  @media (max-width:560px){
+    .compare, .feat-grid{ grid-template-columns:1fr; }
+    .steps{ grid-template-columns:1fr; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .terminal-body .line{ animation:none; opacity:1; }
+    .cursor{ animation:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="wrap">
+    <div class="brand"><span class="mark">ND</span> NDE Downloader</div>
+    <nav>
+      <a href="#masalah">Masalah</a>
+      <a href="#fitur">Fitur</a>
+      <a href="#cara-kerja">Cara Kerja</a>
+      <a href="#keamanan">Keamanan</a>
+    </nav>
+    <a href="#unduh" class="btn btn-ghost-dark">Unduh</a>
+  </div>
+</div>
+
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow">Alat internal · bukan produk resmi Pos Indonesia</div>
+      <h1>Berhenti klik satu-satu.<br>Biarkan <span class="accent">robot</span> yang mengarsipkan surat keluar.</h1>
+      <p class="lead">NDE Downloader membuka NDE, menyusuri setiap halaman, menemukan lampiran surat keluar, lalu menyimpannya rapi di komputer Anda — otomatis, tanpa harus buka satu per satu.</p>
+      <div class="hero-cta">
+        <a href="#unduh" class="btn btn-primary">Unduh Aplikasi</a>
+      </div>
+      <div class="hero-note">Berjalan di komputer Anda sendiri · butuh login NDE Anda · tidak ada data yang dikirim ke server pihak ketiga</div>
+    </div>
+
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <span class="title">nde-downloader.log</span>
+      </div>
+      <div class="terminal-body" id="termBody"></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="masalah">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Masalahnya</div>
+      <h2>Arsip manual itu lambat, dan gampang ada yang terlewat</h2>
+      <p>Mengunduh surat keluar satu per satu dari NDE menghabiskan waktu kerja yang sebenarnya bisa dipakai untuk hal lain.</p>
+    </div>
+    <div class="compare">
+      <div class="card before">
+        <h3>Cara lama</h3>
+        <ul>
+          <li>Buka NDE, cari surat satu per satu di setiap halaman</li>
+          <li>Klik masuk ke tiap surat untuk cek lampirannya</li>
+          <li>Unduh lampiran satu per satu, ganti nama file manual</li>
+          <li>Pindah folder secara manual, rawan salah taruh</li>
+          <li>Lupa halaman terakhir yang sudah dicek</li>
+        </ul>
+      </div>
+      <div class="card after">
+        <h3>Dengan NDE Downloader</h3>
+        <ul>
+          <li>Jalankan sekali, aplikasi menyusuri semua halaman sendiri</li>
+          <li>Lampiran terdeteksi otomatis, apa pun jumlah dan jenisnya</li>
+          <li>File tersimpan dengan nama dan struktur folder yang konsisten</li>
+          <li>Waktu Anda kembali untuk pekerjaan yang lebih penting</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="fitur">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Fitur</div>
+      <h2>Dibuat untuk cara kerja NDE, bukan asal generik</h2>
+    </div>
+    <div class="feat-grid">
+      <div class="feat">
+        <div class="icon">↻</div>
+        <h3>Penelusuran halaman otomatis</h3>
+        <p>Berpindah dari satu halaman daftar surat ke halaman berikutnya sendiri, sampai semua surat tercakup.</p>
+      </div>
+      <div class="feat">
+        <div class="icon">⌕</div>
+        <h3>Deteksi lampiran dinamis</h3>
+        <p>Mengenali lampiran walau jumlah dan formatnya berbeda-beda di tiap surat, tanpa perlu diatur manual.</p>
+      </div>
+      <div class="feat">
+        <div class="icon">▤</div>
+        <h3>Penamaan &amp; folder rapi</h3>
+        <p>File disimpan dengan nama dan struktur folder yang konsisten, gampang dicari kembali kapan pun.</p>
+      </div>
+      <div class="feat">
+        <div class="icon">↺</div>
+        <h3>Lanjut dari titik terakhir</h3>
+        <p>Kalau proses berhenti di tengah jalan, jalankan lagi dan lanjut dari surat terakhir yang belum terunduh.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="cara-kerja">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Cara kerja</div>
+      <h2>Empat langkah, dari login sampai arsip rapi</h2>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="num">1</div>
+        <h3>Masuk dengan akun NDE Anda</h3>
+        <p>Login dilakukan langsung ke NDE seperti biasa — kredensial Anda tidak disimpan atau dikirim ke pihak lain.</p>
+      </div>
+      <div class="step">
+        <div class="num">2</div>
+        <h3>Aplikasi menelusuri semua surat</h3>
+        <p>Setiap halaman daftar surat — Surat Keluar, Surat Masuk, Verifikasi, atau Disposisi — dibuka satu per satu secara otomatis untuk memastikan tidak ada yang terlewat.</p>
+      </div>
+      <div class="step">
+        <div class="num">3</div>
+        <h3>Lampiran diunduh otomatis</h3>
+        <p>Setiap lampiran yang ditemukan langsung diunduh ke folder tujuan yang sudah Anda tentukan.</p>
+      </div>
+      <div class="step">
+        <div class="num">4</div>
+        <h3>Arsip siap dipakai</h3>
+        <p>Selesai — surat dan lampiran tersimpan rapi, siap dicari atau dibackup kapan saja.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section section-dark" id="keamanan">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Perlu diketahui</div>
+      <h2>Alat bantu pribadi, bukan sistem resmi</h2>
+      <p>Dibuat untuk mempermudah pekerjaan sehari-hari — dipakai dengan pemahaman dan tanggung jawab masing-masing.</p>
+    </div>
+    <div class="notice-grid">
+      <div class="notice">
+        <h3>Bukan produk resmi Pos Indonesia</h3>
+        <p>Ini alat yang dibuat sendiri untuk kebutuhan internal, bukan aplikasi resmi perusahaan.</p>
+      </div>
+      <div class="notice">
+        <h3>Hanya untuk pengguna berwenang</h3>
+        <p>Gunakan hanya dengan akun NDE milik Anda sendiri, sesuai hak akses yang Anda miliki.</p>
+      </div>
+      <div class="notice">
+        <h3>Berjalan lokal di komputer Anda</h3>
+        <p>Data dan kredensial diproses langsung di perangkat Anda, tidak dikirim ke server luar.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="cta-final" id="unduh">
+  <div class="wrap">
+    <h2>Coba sekali, dan Anda tidak akan mau kembali klik manual</h2>
+    <p>Unduh aplikasinya, sambungkan ke akun NDE Anda, dan biarkan sisanya berjalan sendiri.</p>
+    <div class="hero-cta">
+      <a href="#" class="btn btn-primary">Unduh Aplikasi (.exe)</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>NDE Downloader — dibuat &amp; dirawat oleh Ruri</span>
+    <span>Dipakai atas kebijakan dan tanggung jawab masing-masing pengguna</span>
+  </div>
+</footer>
+
+<script>
+  const lines = [
+    { t:"12:04:01", c:"", text:"Membuka sesi NDE..." },
+    { t:"12:04:02", c:"ok", text:"Login berhasil" },
+    { t:"12:04:03", c:"", text:"Memindai daftar surat keluar, halaman 1/14" },
+    { t:"12:04:05", c:"ok", text:"12 surat ditemukan di halaman 1" },
+    { t:"12:04:06", c:"", text:"Membuka surat No. 231/SDM/VII/2026" },
+    { t:"12:04:07", c:"warn", text:"3 lampiran terdeteksi" },
+    { t:"12:04:08", c:"ok", text:"Unduh: surat_keluar_00231_1.pdf ✓" },
+    { t:"12:04:08", c:"ok", text:"Unduh: surat_keluar_00231_2.pdf ✓" },
+    { t:"12:04:09", c:"ok", text:"Unduh: surat_keluar_00231_3.pdf ✓" },
+    { t:"12:04:11", c:"", text:"Berpindah ke halaman 2/14" },
+    { t:"12:04:13", c:"ok", text:"9 surat ditemukan di halaman 2" },
+    { t:"12:04:20", c:"", text:"Melanjutkan proses..." },
+  ];
+
+  const body = document.getElementById('termBody');
+  let i = 0;
+
+  function renderLine(item, delay){
+    const div = document.createElement('div');
+    div.className = 'line';
+    div.style.animationDelay = delay + 'ms';
+    div.innerHTML = `<span class="ts">${item.t}</span><span class="${item.c}">${item.text}</span>`;
+    return div;
+  }
+
+  function tick(){
+    if(i >= lines.length){
+      // reset with fade
+      body.innerHTML = '';
+      i = 0;
+    }
+    const el = renderLine(lines[i], 0);
+    body.appendChild(el);
+    if(body.children.length > 11){
+      body.removeChild(body.firstChild);
+    }
+    body.scrollTop = body.scrollHeight;
+    i++;
+  }
+
+  // cursor at end
+  const cursorLine = document.createElement('div');
+  cursorLine.className = 'line';
+  cursorLine.style.opacity = 1;
+  cursorLine.innerHTML = '<span class="cursor"></span>';
+
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(!prefersReduced){
+    tick();
+    setInterval(() => {
+      if(body.contains(cursorLine)) body.removeChild(cursorLine);
+      tick();
+      body.appendChild(cursorLine);
+      body.scrollTop = body.scrollHeight;
+    }, 1100);
+  } else {
+    lines.forEach(l => body.appendChild(renderLine(l,0)));
+  }
+</script>
+
+</body>
+</html>
