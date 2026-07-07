@@ -368,7 +368,7 @@ class NDEDownloaderGUI(ctk.CTk):
         username = self.username_entry.get().strip()
         password = self.password_entry.get()
         download_dir = self.dir_entry.get().strip()
-        headless = True  # Ubah ke True agar browser berjalan di background
+        headless = True  # Ubah ke False agar browser terlihat (untuk debugging)
         
         current_tab = self.tab_control.get()
         excel_path = None
