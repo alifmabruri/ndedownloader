@@ -316,7 +316,7 @@ class NDEDownloaderGUI(ctk.CTk):
                 self.log_queue.task_done()
         except queue.Empty:
             pass
-        self.after(100, self.poll_logs)
+        self.after(500, self.poll_logs)
 
     def load_config(self):
         if CONFIG_FILE.exists():
@@ -368,7 +368,7 @@ class NDEDownloaderGUI(ctk.CTk):
         username = self.username_entry.get().strip()
         password = self.password_entry.get()
         download_dir = self.dir_entry.get().strip()
-        headless = True  # Selalu jalankan headless
+        headless = True  # Ubah ke True agar browser berjalan di background
         
         current_tab = self.tab_control.get()
         excel_path = None

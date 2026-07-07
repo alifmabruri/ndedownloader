@@ -41,7 +41,7 @@ class NDEDownloader:
         cleaned = re.sub(r'\s+', " ", cleaned).strip()
         return cleaned if cleaned else "Tanpa_Nama"
 
-    def _safe_click(self, page, locator, timeout=5000):
+    def _safe_click(self, page, locator, timeout=12000):
         """Click a locator safely: try normal click, then JS click, force click, and overlay removal."""
         try:
             locator.wait_for(state="attached", timeout=timeout)
@@ -235,6 +235,14 @@ class NDEDownloader:
                     'input[id*="username"]',
                     'input[id*="nippos"]',
                 ]
+                
+                # Coba prioritas utama dari codegen
+                try:
+                    loc = page.get_by_role("textbox", name="Masukan Nippos atau NIK")
+                    if loc.count() > 0:
+                        username_input = loc.first
+                except Exception:
+                    pass
                 for sel in username_selectors:
                     try:
                         page.wait_for_selector(sel, timeout=8000)
@@ -267,6 +275,14 @@ class NDEDownloader:
                     'input[type="password"]',
                     'input[name="password"]',
                 ]
+                
+                # Coba prioritas utama dari codegen
+                try:
+                    loc = page.get_by_role("textbox", name="Masukan kata sandi")
+                    if loc.count() > 0:
+                        password_input = loc.first
+                except Exception:
+                    pass
                 for sel in password_selectors:
                     try:
                         loc = page.locator(sel)
@@ -322,14 +338,14 @@ class NDEDownloader:
                 page.wait_for_timeout(3000)
                 try:
                     # Gunakan timeout pendek agar tidak macet jika popup tidak muncul
-                    page.get_by_role("button", name="Selanjutnya").click(timeout=3000)
+                    page.get_by_role("button", name="Selanjutnya").click(timeout=8000)
                     self.log("Menutup popup panduan pertama...")
                     page.wait_for_timeout(1000)
                 except Exception:
                     pass
                     
                 try:
-                    page.get_by_role("button", name="Tutup").click(timeout=3000)
+                    page.get_by_role("button", name="Tutup").click(timeout=8000)
                     self.log("Menutup popup pengumuman...")
                     page.wait_for_timeout(1000)
                 except Exception:
@@ -372,14 +388,15 @@ class NDEDownloader:
             try:
                 # Navigasi ke menu
                 btn = self.find_menu_button(page, menu)
-                if btn is None or not self._safe_click(page, btn, timeout=5000):
+                if btn is None or not self._safe_click(page, btn, timeout=12000):
                     raise Exception("Gagal klik menu via safe_click")
                 page.wait_for_timeout(2000)
                 self.ensure_open_state(page)
 
                 # Klik filter paling kiri jika ada
                 try:
-                    filter_locator = page.locator("div.flex.gap-2.mt-2.mb-2 button, div.flex.gap-2.mt-2.mb-2 a")
+                    filter_name = "Disposisi Masuk" if menu == "Disposisi" else "Semua"
+                    filter_locator = page.get_by_role("button", name=filter_name)
                     if filter_locator.count() > 0:
                         filter_btn = None
                         for i in range(filter_locator.count()):
@@ -388,7 +405,7 @@ class NDEDownloader:
                                 filter_btn = candidate
                                 break
                         if filter_btn is not None:
-                            if not self._safe_click(page, filter_btn, timeout=3000):
+                            if not self._safe_click(page, filter_btn, timeout=8000):
                                 self.log("Filter button tidak dapat diklik meskipun terlihat.", "debug")
                             else:
                                 page.wait_for_timeout(1500)
@@ -418,7 +435,7 @@ class NDEDownloader:
                     # Metode 1: Playwright CSS locator (termasuk SVG selector yang terbukti bekerja)
                     next_btn = self.get_next_page_button(page)
                     if next_btn is not None and next_btn != "JS_CLICK":
-                        if self._safe_click(page, next_btn, timeout=3000):
+                        if self._safe_click(page, next_btn, timeout=8000):
                             nav_ok = True
                         else:
                             self.log("Next page button ditemukan tetapi klik gagal.", "debug")
@@ -433,7 +450,7 @@ class NDEDownloader:
                     page.wait_for_timeout(1500)
                     new_snapshot = self._snapshot_page_state(page, list_selector)
                     if prev_snapshot is not None and new_snapshot == prev_snapshot:
-                        self.log("Halaman tidak berubah setelah klik Next — menghentikan paginasi.", "warning")
+                        self.log("Halaman tidak berubah setelah klik Next Ã¢â‚¬â€ menghentikan paginasi.", "warning")
                         break
 
                     page_num += 1
@@ -465,7 +482,7 @@ class NDEDownloader:
             try:
                 self.log(f"Membuka menu {menu}...")
                 btn = self.find_menu_button(page, menu)
-                if btn is None or not self._safe_click(page, btn, timeout=5000):
+                if btn is None or not self._safe_click(page, btn, timeout=12000):
                     raise Exception("Gagal klik menu via safe_click")
                 page.wait_for_timeout(2000)
             except Exception as e:
@@ -474,7 +491,8 @@ class NDEDownloader:
                 
             # Klik filter paling kiri jika ada untuk mereset/memperluas pencarian
             try:
-                filter_locator = page.locator("div.flex.gap-2.mt-2.mb-2 button, div.flex.gap-2.mt-2.mb-2 a")
+                filter_name = "Disposisi Masuk" if menu == "Disposisi" else "Semua"
+                filter_locator = page.get_by_role("button", name=filter_name)
                 if filter_locator.count() > 0:
                     filter_btn = None
                     for i in range(filter_locator.count()):
@@ -483,7 +501,7 @@ class NDEDownloader:
                             filter_btn = candidate
                             break
                     if filter_btn is not None:
-                        if self._safe_click(page, filter_btn, timeout=3000):
+                        if self._safe_click(page, filter_btn, timeout=8000):
                             self.log("Mengatur filter tampilan surat...", "debug")
                             page.wait_for_timeout(1000)
                         else:
@@ -568,17 +586,18 @@ class NDEDownloader:
             # Navigasi ke menu
             try:
                 btn = self.find_menu_button(page, menu)
-                if btn is None or not self._safe_click(page, btn, timeout=5000):
+                if btn is None or not self._safe_click(page, btn, timeout=12000):
                     raise Exception("Gagal klik menu via safe_click")
                 page.wait_for_timeout(2000)
                 self.ensure_open_state(page)
 
                 # Klik filter paling kiri jika ada untuk mereset/memperluas pencarian
                 try:
-                    filter_locator = page.locator("div.flex.gap-2.mt-2.mb-2 button, div.flex.gap-2.mt-2.mb-2 a")
+                    filter_name = "Disposisi Masuk" if menu == "Disposisi" else "Semua"
+                    filter_locator = page.get_by_role("button", name=filter_name)
                     if filter_locator.count() > 0:
-                        if not self._safe_click(page, filter_locator.first, timeout=3000):
-                            filter_locator.first.click(timeout=3000)
+                        if not self._safe_click(page, filter_locator.first, timeout=8000):
+                            filter_locator.first.click(timeout=8000)
                         self.log("Mengatur filter tampilan surat...", "debug")
                         page.wait_for_timeout(1000)
                 except Exception:
@@ -676,7 +695,7 @@ class NDEDownloader:
                     f.write(str(b) + "\n")
                 f.write("\n\n=== FULL HTML ===\n")
                 f.write(full_html)
-            self.log(f"[DEBUG] HTML pagination disimpan ke: {debug_file.name} — kirimkan file ini untuk analisis selector.", "warning")
+            self.log(f"[DEBUG] HTML pagination disimpan ke: {debug_file.name} Ã¢â‚¬â€ kirimkan file ini untuk analisis selector.", "warning")
         except Exception as e:
             self.log(f"[DEBUG] Gagal dump pagination: {str(e)}", "debug")
 
@@ -749,18 +768,18 @@ class NDEDownloader:
             "a:has-text('Next')",
             "a:has-text('Berikutnya')",
             # --- Karakter panah / simbol ---
-            "button:has-text('›')",
-            "button:has-text('»')",
+            "button:has-text('Ã¢â‚¬Âº')",
+            "button:has-text('Ã‚Â»')",
             "button:has-text('>')",
-            "a:has-text('›')",
-            "a:has-text('»')",
+            "a:has-text('Ã¢â‚¬Âº')",
+            "a:has-text('Ã‚Â»')",
             # --- Lucide icon ---
             "button:has(.lucide-chevron-right)",
             "button:has(svg.lucide-chevron-right)",
             "button:has([data-lucide='chevron-right'])",
             "button:has(svg[class*='chevron-right'])",
             "button:has(svg[class*='ChevronRight'])",
-            # SVG child selector (original — terbukti bekerja di Playwright)
+            # SVG child selector (original Ã¢â‚¬â€ terbukti bekerja di Playwright)
             "button svg[class*='chevron-right']",
             "button svg[class*='ChevronRight']",
             # --- Aria label ---
@@ -834,7 +853,7 @@ class NDEDownloader:
     def ensure_open_state(self, page):
         """Ensure all collapsible sections are opened if currently closed."""
         try:
-            locators = page.locator("button[aria-expanded='false'], button[data-state='closed'][aria-controls], button[data-state='closed'][aria-expanded='false']")
+            locators = page.locator("button[aria-expanded='false']:not([aria-haspopup]), button[data-state='closed'][aria-controls]:not([aria-haspopup]), button[data-state='closed'][aria-expanded='false']:not([aria-haspopup])")
             count = locators.count()
             if count > 0:
                 self.log(f"Menemukan {count} section tertutup, membuka semuanya...", "debug")
@@ -847,7 +866,7 @@ class NDEDownloader:
                             btn.scroll_into_view_if_needed(timeout=2000)
                         except Exception:
                             pass
-                        if self._safe_click(page, btn, timeout=3000):
+                        if self._safe_click(page, btn, timeout=8000):
                             page.wait_for_timeout(300)
                             continue
                         try:
@@ -934,9 +953,9 @@ class NDEDownloader:
 
                 if total_display:
                     pct = min(100, int((self._downloaded / total_display) * 100))
-                    self.log(f"Memproses surat ke-{current_global} (hal. {page_number}, baris {i+1}/{count_on_page}) — {self._downloaded}/{total_display} selesai ({pct}%)...")
+                    self.log(f"Memproses surat ke-{current_global} (hal. {page_number}, baris {i+1}/{count_on_page}) Ã¢â‚¬â€ {self._downloaded}/{total_display} selesai ({pct}%)...")
                 else:
-                    self.log(f"Memproses surat ke-{current_global} (hal. {page_number}, baris {i+1}/{count_on_page}) — {self._downloaded} selesai...")
+                    self.log(f"Memproses surat ke-{current_global} (hal. {page_number}, baris {i+1}/{count_on_page}) Ã¢â‚¬â€ {self._downloaded} selesai...")
 
                 # Relocate item setelah kembali dari detail
                 items = page.locator(list_selector)
@@ -953,10 +972,10 @@ class NDEDownloader:
                             pct = min(100, int((self._downloaded / total_display) * 100))
                             self.progress_callback(self._downloaded / total_display)
                             self.total_callback(self._downloaded, total_display)
-                            self.log(f"Surat ke-{current_global} selesai — {self._downloaded}/{total_display} ({pct}%) berhasil diunduh.", "success")
+                            self.log(f"Surat ke-{current_global} selesai Ã¢â‚¬â€ {self._downloaded}/{total_display} ({pct}%) berhasil diunduh.", "success")
                         else:
                             self.total_callback(self._downloaded, 0)
-                            self.log(f"Surat ke-{current_global} selesai — total {self._downloaded} surat berhasil diunduh.", "success")
+                            self.log(f"Surat ke-{current_global} selesai Ã¢â‚¬â€ total {self._downloaded} surat berhasil diunduh.", "success")
                 except Exception as e:
                     self.log(f"Terjadi kesalahan saat memproses surat ke-{current_global}: {str(e)}", "error")
                     self.log(traceback.format_exc(), "debug")
@@ -977,7 +996,7 @@ class NDEDownloader:
                 # Jika baru halaman 1 dan ada 10 item (kemungkinan masih ada halaman berikutnya),
                 # dump HTML untuk analisis selector
                 if page_number == 1 and count_on_page >= 10:
-                    self.log(f"Halaman berikutnya tidak dapat diakses di menu {menu_name} meski ada {count_on_page} item — mencoba menyimpan informasi debug.", "warning")
+                    self.log(f"Halaman berikutnya tidak dapat diakses di menu {menu_name} meski ada {count_on_page} item Ã¢â‚¬â€ mencoba menyimpan informasi debug.", "warning")
                     self.dump_pagination_debug(page)
                 else:
                     self.log(f"Semua halaman di menu {menu_name} telah selesai diproses. Total {self._downloaded} surat berhasil diunduh.", "info")
@@ -993,8 +1012,8 @@ class NDEDownloader:
             nav_success = False
             try:
                 if isinstance(next_btn, str) and next_btn == "JS_CLICK":
-                    raise Exception("JS_CLICK sentinel — skip ke JS")
-                if self._safe_click(page, next_btn, timeout=5000):
+                    raise Exception("JS_CLICK sentinel Ã¢â‚¬â€ skip ke JS")
+                if self._safe_click(page, next_btn, timeout=12000):
                     nav_success = True
                 else:
                     raise Exception("Safe click gagal")
@@ -1009,12 +1028,12 @@ class NDEDownloader:
                             class_attr = (next_btn.get_attribute("class") or "").lower()
                             class_tokens = class_attr.split()
                             if disabled_attr is not None or aria_disabled in ("true", "1") or "disabled" in class_tokens:
-                                self.log("Tombol berikutnya tampak dalam keadaan disabled — tidak akan mencoba klik paksa. Menganggap akhir pagination.", "debug")
+                                self.log("Tombol berikutnya tampak dalam keadaan disabled Ã¢â‚¬â€ tidak akan mencoba klik paksa. Menganggap akhir pagination.", "debug")
                                 break
                         except Exception:
                             pass
 
-                        if self._safe_click(page, next_btn, timeout=3000):
+                        if self._safe_click(page, next_btn, timeout=8000):
                             nav_success = True
                             self.log("Navigasi ke halaman berikutnya berhasil (force/alternate click).", "debug")
                 except Exception:
@@ -1026,7 +1045,7 @@ class NDEDownloader:
                         nav_success = True
                         self.log("Navigasi ke halaman berikutnya berhasil (JavaScript).", "debug")
                     else:
-                        self.log(f"Tidak dapat berpindah ke halaman {page_number} — semua cara telah dicoba.", "warning")
+                        self.log(f"Tidak dapat berpindah ke halaman {page_number} Ã¢â‚¬â€ semua cara telah dicoba.", "warning")
                         break
 
             if not nav_success:
@@ -1042,7 +1061,7 @@ class NDEDownloader:
 
             new_snapshot = self._snapshot_page_state(page, list_selector)
             if prev_snapshot is not None and new_snapshot == prev_snapshot:
-                self.log("Halaman tidak berubah setelah klik Next — menghentikan paginasi.", "warning")
+                self.log("Halaman tidak berubah setelah klik Next Ã¢â‚¬â€ menghentikan paginasi.", "warning")
                 break
 
     def process_single_item(self, page, item_locator, menu_name, search_query=None):
@@ -1076,7 +1095,7 @@ class NDEDownloader:
             ".info-row",
         ]:
             try:
-                page.wait_for_selector(_det_sel, timeout=5000)
+                page.wait_for_selector(_det_sel, timeout=12000)
                 detail_opened = True
                 break
             except Exception:
@@ -1229,13 +1248,20 @@ class NDEDownloader:
         # 1. Cetak Surat ke PDF
         pdf_saved = False
         try:
-            # Coba berbagai varian nama tombol Cetak
+            # Coba berbagai varian nama tombol Cetak, prioritas "Cetak"
             cetak_btn = None
-            for _cetak_name in ["Cetak", "Print", "Cetak Surat", "Download PDF"]:
-                _loc = page.get_by_role("button", name=_cetak_name)
-                if _loc.count() > 0:
-                    cetak_btn = _loc
-                    break
+            try:
+                if page.get_by_role("button", name="Cetak").count() > 0:
+                    cetak_btn = page.get_by_role("button", name="Cetak")
+            except Exception:
+                pass
+                
+            if cetak_btn is None:
+                for _cetak_name in ["Print", "Cetak Surat", "Download PDF"]:
+                    _loc = page.get_by_role("button", name=_cetak_name)
+                    if _loc.count() > 0:
+                        cetak_btn = _loc
+                        break
             # Fallback: cari tombol dengan icon print
             if cetak_btn is None:
                 _loc = page.locator("button:has(.lucide-printer), button:has(svg[class*='printer'])")
@@ -1245,11 +1271,11 @@ class NDEDownloader:
             if cetak_btn is not None:
                 try:
                     # Tunggu tombol Cetak siap klik
-                    cetak_btn.first.wait_for(state="visible", timeout=5000)
+                    cetak_btn.first.wait_for(state="visible", timeout=12000)
                     popup_page = None
                     try:
-                        with page.expect_popup(timeout=10000) as popup_info:
-                            if not self._safe_click(page, cetak_btn.first, timeout=10000):
+                        with page.expect_popup(timeout=25000) as popup_info:
+                            if not self._safe_click(page, cetak_btn.first, timeout=25000):
                                 raise RuntimeError("Gagal mengklik tombol Cetak surat.")
                         popup_page = popup_info.value
                     except Exception as print_popup_err:
@@ -1267,7 +1293,7 @@ class NDEDownloader:
                     if popup_page:
                         self.log("Menunggu render dokumen cetak selesai...", "info")
                         try:
-                            popup_page.wait_for_load_state("networkidle", timeout=10000)
+                            popup_page.wait_for_load_state("networkidle", timeout=25000)
                         except Exception:
                             popup_page.wait_for_load_state("load")
                         popup_page.wait_for_timeout(4000)
@@ -1314,13 +1340,20 @@ class NDEDownloader:
             
         # 2. Download Lampiran jika ada
         try:
-            # Coba berbagai varian nama tombol Lampiran
+            # Coba prioritas utama "Lampiran & Referensi"
             lampiran_btn = None
-            for _lamp_name in ["Lampiran & Referensi", "Lampiran", "Referensi", "Attachment", "Attachments"]:
-                _loc = page.get_by_role("button", name=_lamp_name)
-                if _loc.count() > 0:
-                    lampiran_btn = _loc
-                    break
+            try:
+                if page.get_by_role("button", name="Lampiran & Referensi").count() > 0:
+                    lampiran_btn = page.get_by_role("button", name="Lampiran & Referensi")
+            except Exception:
+                pass
+                
+            if lampiran_btn is None:
+                for _lamp_name in ["Lampiran", "Referensi", "Attachment", "Attachments"]:
+                    _loc = page.get_by_role("button", name=_lamp_name)
+                    if _loc.count() > 0:
+                        lampiran_btn = _loc
+                        break
             if lampiran_btn is None:
                 _loc = page.locator("button:has-text('Lampiran')")
                 if _loc.count() > 0:
@@ -1329,7 +1362,7 @@ class NDEDownloader:
             if lampiran_btn is not None:
               try:
                 # Klik tombol lampiran
-                if not self._safe_click(page, lampiran_btn.first, timeout=6000):
+                if not self._safe_click(page, lampiran_btn.first, timeout=15000):
                     raise RuntimeError("Gagal mengklik tombol Lampiran.")
                 page.wait_for_timeout(2000)
                 
@@ -1414,7 +1447,7 @@ class NDEDownloader:
                 try:
                     _btn = page.get_by_role("button", name=_close_name)
                     if _btn.count() > 0:
-                        _btn.first.click(timeout=3000)
+                        _btn.first.click(timeout=8000)
                         tutup_clicked = True
                         break
                 except Exception:
